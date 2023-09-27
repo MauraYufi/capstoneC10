@@ -30,6 +30,7 @@ void setup() {
 //=============
 
 void loop() {
+
     getData();
     showData();
 }
