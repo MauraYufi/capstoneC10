@@ -6,6 +6,8 @@
 #include <RF24.h>
 #include <math.h>
 
+#include <vector>
+
 #define CE_PIN 26
 #define CSN_PIN 27
 
@@ -23,6 +25,14 @@ float xn;
 float ax; float ay; float az;
 float a;
 float h;
+
+// waktu penghitungan Hs, untuk sekarang 1 menit.
+int minimalMinute = 1;
+unsigned long prevMinutes;
+unsigned long minimalSecond = minimalMinute * 60;
+
+unsigned long pointer_Hs = 0;
+std::vector<float> Hs;
 
 unsigned long currentMillis;
 unsigned long prevMillis;
@@ -59,7 +69,10 @@ void loop()
         Serial.println("SimpleTx Starting");
         radio.setRetries(3, 5); // delay, count
         radio.openWritingPipe(slaveAddress);
-        send();
+        // Untuk menghitung tinggi gelombang saat ini
+        getH();
+        // Pointer untuk perhitungan Significant Wave
+        pointer_Hs += 1;
 
         Serial.print("angleX : ");
         Serial.print(mpu6050.getAngleX());
@@ -80,6 +93,13 @@ void loop()
         radio.openReadingPipe(1, slaveAddress);
         radio.startListening();
     }
+    // Jika pointer HS sudah menunjukkan menit ke
+    if (pointer_Hs == minimalSecond)
+    {
+        // mengirim Hs
+        send();
+        pointer_Hs = 0;
+    }
     dataTrigger = 1;
     Serial.println(dataTrigger);
     delay(500);
@@ -90,47 +110,19 @@ void loop()
 void send()
 {
     bool rslt;
-	Serial.println("wX0\twY0\twZ0");
-    wx0 = mpu6050.getAngleX();
-    wy0 = mpu6050.getAngleY();
-    wz0 = mpu6050.getAngleZ();
-    Serial.print(wx0);
-	Serial.print("\t");
-    Serial.print(wy0);
-	Serial.print("\t");
-    Serial.print(wz0);
-	Serial.println("")
 
-    delay(1000);
-	Serial.println("wX1\twY1\twZ1");
-    mpu6050.update();
-    wx1 = mpu6050.getAngleX();
-    wy1 = mpu6050.getAngleY();
-    wz1 = mpu6050.getAngleZ();
-    Serial.print(wx1);
-	Serial.print("\t");
-    Serial.print(wy1);
-	Serial.print("\t");
-    Serial.print(wz1);
-	Serial.println("")
-	
-    ax = mpu6050.getAccX();
-    ay = mpu6050.getAccY();
-    az = mpu6050.getAccZ();
-    a = sqrt((pow(ax / 9.806, 2) + pow(ay / 9.806, 2) + pow(az / 9.806, 2)));
-    xn = sqrt((pow((wx1 - wx0) * 0.0175, 2) + pow((wy1 - wy0) * 0.0175, 2) + pow((wz1 - wz0) * 0.0175, 2)));
-    h = a / pow(xn, 2);
-    PembacaanTG = h;
+    PembacaanTG = getHs();
+
     rslt = radio.write(&PembacaanTG, sizeof(PembacaanTG));
     // Always use sizeof() as it gives the size as the number of bytes.
     // For example if dataToSend was an int sizeof() would correctly return 2
 
     Serial.println("Data Sent");
-	Serial.print("Tinggi\t: ")
+    Serial.print("Tinggi Hs\t: ");
     Serial.println(PembacaanTG);
-	Serial.print("a\t: ")
+    Serial.print("a\t: ");
     Serial.println(a);
-	Serial.print("xn\t: ")
+    Serial.print("xn\t: ");
     Serial.println(xn);
     // Serial.println(h);
     if (rslt)
@@ -156,4 +148,61 @@ void getData()
     {
         radio.read(&dataTrigger, sizeof(dataTrigger));
     }
+}
+
+//================
+
+void getH()
+{
+    Serial.println("wX0\twY0\twZ0");
+    wx0 = mpu6050.getAngleX();
+    wy0 = mpu6050.getAngleY();
+    wz0 = mpu6050.getAngleZ();
+    Serial.print(wx0);
+    Serial.print("\t");
+    Serial.print(wy0);
+    Serial.print("\t");
+    Serial.print(wz0);
+    Serial.println("");
+
+    delay(1000);
+    Serial.println("wX1\twY1\twZ1");
+    mpu6050.update();
+    wx1 = mpu6050.getAngleX();
+    wy1 = mpu6050.getAngleY();
+    wz1 = mpu6050.getAngleZ();
+    Serial.print(wx1);
+    Serial.print("\t");
+    Serial.print(wy1);
+    Serial.print("\t");
+    Serial.print(wz1);
+    Serial.println("");
+
+    ax = mpu6050.getAccX();
+    ay = mpu6050.getAccY();
+    az = mpu6050.getAccZ();
+
+    a = sqrt((pow(ax / 9.806, 2) + pow(ay / 9.806, 2) + pow(az / 9.806, 2)));
+    xn = sqrt((pow((wx1 - wx0) * 0.0175, 2) + pow((wy1 - wy0) * 0.0175, 2) + pow((wz1 - wz0) * 0.0175, 2)));
+    h = a / pow(xn, 2);
+
+    Hs.push_back(h);
+}
+
+float getHs()
+{
+    // urutkan hs untuk mendapat nilai terbesar
+    sort(Hs.begin(), Hs.end(), greater<float>());
+
+    unsigned float Hs_akhir = 0;
+    totalH = minimalSecond / 3;
+
+    for (int i = 0; i < totalH; i++)
+    {
+        Hs_akhir += Hs[i];
+    }
+
+    Hs_akhir /= totalH;
+
+    return Hs_akhir;
 }
