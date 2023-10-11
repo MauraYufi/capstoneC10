@@ -16,7 +16,7 @@ void setReciever();
 float PembacaanTG;    //for recieved wave height
 bool newData = false;
 int dataTrigger=0; 
-char rate[6]="";
+String rate="";
 float output;         //result fuzzy rule for persentace rate
 int count = 0;        //for lcd next button
 const int btnPin = 4; //for button start
@@ -130,7 +130,9 @@ void loop()
     start();
     
     //set kembali menjadi transmitter
-    radio.openWritingPipe(thisSlaveAddress);
+    //radio.stopListening();
+    //radio.openWritingPipe(thisSlaveAddress);
+    
   }
   
   // fuzzy logic
@@ -143,13 +145,13 @@ void loop()
   
   float opt = fuzzy->defuzzify(1);
 
-  float output = opt * 100;
+  output = opt * 100;
 
   if(output < 50){
-    char rate[6]="Aman";
+    rate="Aman";
   }
   else {
-    char rate[6]="Bahaya";
+    rate="Bahaya";
   }
 }
 
@@ -172,10 +174,12 @@ void start(){
 void setReciever() {
     radio.openReadingPipe(1, thisSlaveAddress);
     radio.startListening();
+    Serial.println("R");
     getData();
     showData();
+    
     //delay(3000);
-    radio.stopListening();
+    //radio.stopListening();
 }
 //========================================================================= get data function
 void getData() {
@@ -214,6 +218,7 @@ void showData() {
       if(count%4 == 0){
         lcd.setCursor(6,0);
         lcd.print(rate);
+        Serial.println(rate);
         lcd.setCursor(4,1);
         lcd.print("Berlayar");
         delay(100);
@@ -248,4 +253,9 @@ void showData() {
     }
   }
   newData = false;
+  radio.stopListening();
+  radio.openWritingPipe(thisSlaveAddress);
+  count=0;
+  lcd.clear();
+  Serial.println("T");
 }
