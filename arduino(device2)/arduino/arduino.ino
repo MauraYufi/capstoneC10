@@ -206,10 +206,6 @@ void getData() {
         radio.read( &PembacaanTG, sizeof(PembacaanTG) );
         newData = true;
         lcd.clear();
-        Sample++;
-        windvelocity();
-        RPMcalc();
-        WindSpeed();
         xyz=1;
     }
     else
@@ -218,6 +214,11 @@ void getData() {
       lcd.print("Mohon");
       lcd.setCursor(4,1);
       lcd.print("Tunggu");
+      Sample++;
+      windvelocity();
+      RPMcalc();
+      WindSpeed();
+      Serial.print(speedwind);
       //delay(100);
     } 
   }   
@@ -249,7 +250,7 @@ void showData() {
         lcd.setCursor(3,0);
         lcd.print("Kec. Angin");
         lcd.setCursor(5,1);
-        lcd.print("26.3");
+        lcd.print(speedwind);
         lcd.print(" km/h"); 
         delay(100);
       }

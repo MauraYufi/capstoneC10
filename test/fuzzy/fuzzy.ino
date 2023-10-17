@@ -82,8 +82,8 @@ void setup()
 
 void loop()
 {
-  float in_wave = 2.84;
-  float in_wind = 26.3;
+  float in_wave = 2000;
+  float in_wind = 0;
 
   Serial.print("\t\t\tWave: ");
   Serial.println(in_wave);
