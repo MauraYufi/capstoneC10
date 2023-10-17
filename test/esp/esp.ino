@@ -44,7 +44,6 @@ void setup()
     Wire.begin();
     mpu6050.begin();
     mpu6050.calcGyroOffsets(true);
-    Serial.begin(9600);
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     // Serial.println("SimpleTx Starting");
 
@@ -99,41 +98,15 @@ void loop()
         // mengirim Hs
         send();
         pointer_Hs = 0;
+        dataTrigger = 1;
     }
-    dataTrigger = 1;
+    
     Serial.println(dataTrigger);
     delay(500);
 }
 
 //====================
 
-void send()
-{
-    bool rslt;
-
-    PembacaanTG = getHs();
-
-    rslt = radio.write(&PembacaanTG, sizeof(PembacaanTG));
-    // Always use sizeof() as it gives the size as the number of bytes.
-    // For example if dataToSend was an int sizeof() would correctly return 2
-
-    Serial.println("Data Sent");
-    Serial.print("Tinggi Hs\t: ");
-    Serial.println(PembacaanTG);
-    Serial.print("a\t: ");
-    Serial.println(a);
-    Serial.print("xn\t: ");
-    Serial.println(xn);
-    // Serial.println(h);
-    if (rslt)
-    {
-        Serial.println(" Acknowledge received");
-    }
-    else
-    {
-        Serial.println(" Tx failed");
-    }
-}
 
 //================
 
@@ -189,13 +162,46 @@ void getH()
     Hs.push_back(h);
 }
 
+void send()
+{
+    bool rslt;
+    radio.stopListening();
+    radio.openWritingPipe(slaveAddress);
+    PembacaanTG = getHs();
+
+    rslt = radio.write(&PembacaanTG, sizeof(PembacaanTG));
+    // Always use sizeof() as it gives the size as the number of bytes.
+    // For example if dataToSend was an int sizeof() would correctly return 2
+
+    Serial.println("Data Sent");
+    Serial.print("Tinggi Hs\t: ");
+    Serial.println(PembacaanTG);
+    Serial.print("a\t: ");
+    Serial.println(a);
+    Serial.print("xn\t: ");
+    Serial.println(xn);
+    // Serial.println(h);
+    if (rslt)
+    {
+        Serial.println(" Acknowledge received");
+        radio.openReadingPipe(1, slaveAddress);
+        radio.startListening();
+        Serial.println("R");
+    }
+    else
+    {
+        Serial.println(" Tx failed");
+    }
+}
+
+
 float getHs()
 {
     // urutkan hs untuk mendapat nilai terbesar
-    sort(Hs.begin(), Hs.end(), greater<float>());
+    sort(Hs.begin(), Hs.end(), std::greater<float>());
 
-    unsigned float Hs_akhir = 0;
-    totalH = minimalSecond / 3;
+    float Hs_akhir = 0;
+    float totalH = minimalSecond / 3;
 
     for (int i = 0; i < totalH; i++)
     {
