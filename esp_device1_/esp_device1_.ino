@@ -159,6 +159,10 @@ void getH()
     xn = sqrt((pow((wx1 - wx0) * 0.0175, 2) + pow((wy1 - wy0) * 0.0175, 2) + pow((wz1 - wz0) * 0.0175, 2)));
     h = a / pow(xn, 2);
 
+    if (h>100){
+      h = 0;
+    }
+
     Hs.push_back(h);
 }
 

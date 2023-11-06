@@ -53,17 +53,17 @@ LiquidCrystal_I2C lcd(0x27,16,2); // set address I2C dan besar karakter untuk lc
 //========================================================================= define for fuzzy logic
 Fuzzy *fuzzy = new Fuzzy();
 
-// Fuzzy input wave height
+// Fuzzy input gelombang
 FuzzySet *low = new FuzzySet(0, 0, 0.5 , 2.5);
 FuzzySet *medium = new FuzzySet(0.5, 2.5, 2.5, 4);
 FuzzySet *high = new FuzzySet(2.5, 4, 14, 14);
   
-// Fuzzy input wind speed
+// Fuzzy input angin
 FuzzySet *slow = new FuzzySet(0, 0, 12, 20);
 FuzzySet *moderate = new FuzzySet(12, 20, 28, 38);
 FuzzySet *strong = new FuzzySet(28, 38, 64, 64);
   
-// Fuzzy output rate
+  // Fuzzy output angin
 FuzzySet *safe = new FuzzySet(0, 0, 0, 0.5);
 FuzzySet *normal = new FuzzySet(0, 0.5, 0.5, 1);
 FuzzySet *danger = new FuzzySet(0.5, 1, 1, 1);
@@ -107,8 +107,8 @@ void setup() {
     rate->addFuzzySet(normal);
     rate->addFuzzySet(danger);
     fuzzy->addFuzzyOutput(rate);
-  
-    //Fuzzy rule 1
+
+    //1
     FuzzyRuleAntecedent *low_slow = new FuzzyRuleAntecedent();
     low_slow->joinWithOR(low,slow);
   
@@ -118,7 +118,7 @@ void setup() {
     FuzzyRule *fuzzyRule01 = new FuzzyRule(1, low_slow, rate_safe);
     fuzzy->addFuzzyRule(fuzzyRule01);
   
-    //Fuzzy rule 2
+    //2
     FuzzyRuleAntecedent *medium_moderate = new FuzzyRuleAntecedent();
     medium_moderate->joinWithAND(medium,moderate);
   
@@ -128,7 +128,7 @@ void setup() {
     FuzzyRule *fuzzyRule02 = new FuzzyRule(2, medium_moderate, rate_normal);
     fuzzy->addFuzzyRule(fuzzyRule02);
   
-    //Fuzzy rule 3
+    //3
     FuzzyRuleAntecedent *high_strong = new FuzzyRuleAntecedent();
     high_strong->joinWithOR(high,strong);
   
@@ -150,25 +150,6 @@ void loop()
     //radio.stopListening();
     //radio.openWritingPipe(thisSlaveAddress);
     
-  }
-  
-  // fuzzy logic
-  float in_wave = PembacaanTG;
-  float in_wind = speedwind; // nanti dari anemo
-
-  fuzzy->setInput(1, in_wave);
-  fuzzy->setInput(2, in_wind);
-  fuzzy->fuzzify();
-  
-  float opt = fuzzy->defuzzify(1);
-
-  output = opt * 100;
-
-  if(output < 50){
-    rate="Aman";
-  }
-  else {
-    rate="Bahaya";
   }
 }
 
@@ -218,18 +199,42 @@ void getData() {
       windvelocity();
       RPMcalc();
       WindSpeed();
-      Serial.print(speedwind);
+      Serial.println(speedwind);
       //delay(100);
     } 
   }   
 }
 
+float fuzzycalc(){
+  // fuzzy logic
+  float in_wave = PembacaanTG;
+  float in_wind = speedwind; // nanti dari anemo
+      
+  fuzzy->setInput(1, in_wave);
+  fuzzy->setInput(2, in_wind);
+  fuzzy->fuzzify();
+        
+  float output = fuzzy->defuzzify(1);
+  Serial.println(output);
+  
+  //output = opt * 100;
+      
+  if(output < 0.5){
+    rate=" Aman ";
+    }
+  else {
+    rate="Bahaya";
+    }
+  return output;
+}
+        
 //========================================================================= show data function
 void showData() {
   while(digitalRead(btnPin)==1){
     if (newData == true) {
       Serial.print("Data received ");
       Serial.println(PembacaanTG);
+      float fuz = fuzzycalc()* 100;
       
       if(digitalRead(button)==0){
         delay(100);
@@ -238,7 +243,7 @@ void showData() {
       }
       
       if(count%4 == 0){
-        lcd.setCursor(6,0);
+        lcd.setCursor(5,0);
         lcd.print(rate);
         Serial.println(rate);
         lcd.setCursor(4,1);
@@ -251,7 +256,7 @@ void showData() {
         lcd.print("Kec. Angin");
         lcd.setCursor(5,1);
         lcd.print(speedwind);
-        lcd.print(" km/h"); 
+        lcd.print(" m/s"); 
         delay(100);
       }
       
@@ -268,7 +273,8 @@ void showData() {
         lcd.setCursor(1,0);
         lcd.print("Tingkat Bahaya");
         lcd.setCursor(6,1);
-        lcd.print(output);
+        lcd.print(fuz);
+        Serial.println(fuz);
         lcd.print("%");   
         delay(100);
       }
