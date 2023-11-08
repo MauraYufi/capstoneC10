@@ -317,7 +317,7 @@ void showData()
 // Measure wind speed
 void windvelocity()
 {
-    speedwind = 0;
+    // speedwind = 0;
     attachInterrupt(0, addcount, CHANGE);
     unsigned long millis();
     long startTime = millis();
