@@ -50,6 +50,8 @@ int count = 0;                //for lcd next button
 RF24 radio(CE_PIN, CSN_PIN);      // Create rdio
 LiquidCrystal_I2C lcd(0x27,16,2); // set address I2C dan besar karakter untuk lcd 16×2
 
+//========================================================================= Progress Bar
+
 //========================================================================= define for fuzzy logic
 Fuzzy *fuzzy = new Fuzzy();
 
@@ -190,9 +192,15 @@ void getData() {
     else
     {
       lcd.setCursor(5,0);
-      lcd.print("Mohon");
+      lcd.print("Mohon Tunggu");
+      
       lcd.setCursor(4,1);
-      lcd.print("Tunggu");
+      char progressBar[Sample%6];
+      for (int i=0; i<; i++) {
+        progressBar[i] = "."
+      }
+      lcd.print(char);
+      
       Sample++;
       windvelocity();
       RPMcalc();
