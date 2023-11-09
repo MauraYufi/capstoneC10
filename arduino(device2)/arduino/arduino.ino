@@ -6,57 +6,48 @@
 #include <LiquidCrystal_I2C.h>    //library LCD
 #include <Fuzzy.h>
 
-// Library Vector/List untuk menghitung rata rata
-// #include <vector>
-
-// Pin definitions
-# define windPin 2 // Receive the data from sensor
-
-// Constants definitions
-const float pi = 3.14159265; // pi number
-int period = 10000; // Measurement period (miliseconds)
-int delaytime = 10000; // Time between samples (miliseconds)
-int an_radio = 90; // Distance from center windmill to outer cup (mm)
-int jml_celah = 18; // jumlah celah sensor
-
-// Variable definitions
-unsigned int Sample = 0; // Sample number
-unsigned int counter = 0; // B/W counter for sensor
-unsigned int RPM = 0; // Revolutions per minute
-float speedwind = 0; // Wind speed (m/s)
-
-// Variabel rata rata Vektor
-float totalWind = 0;
-float avgWind = 0;
-int detikKe = 0
-const int batasDetikKe = 10 // Untuk pengujian, diganti 120 detik (2 menit) di akhir
-
-
-//========================================================================= define function
-void getData();
-void showData();
-void start();
-void setReciever();
-
-//========================================================================= define global variable
-float PembacaanTG;    //for recieved wave height
-bool newData = false;
-int dataTrigger=0; 
-String rate="";
-float output;         //result fuzzy rule for persentace rate
-int count = 0;        //for lcd next button
-const int btnPin = 4; //for button start
-int button = 5;       //for button next lcd
-
-//========================================================================= define for transmitter reciever radio
+//========================================================================= Pin definitions
+#define windPin 2 // Receive the data from sensor
 #define CE_PIN    7
 #define CSN_PIN   8
 
-const byte thisSlaveAddress[5] = {'R','x','A','A','A'};
+//========================================================================= define function
+void start();
+void setReciever();
+void getData();
+float fuzzycalc();
+void showData();
+void windvelocity();
+void RPMcalc();
+void WindSpeed();
+void addcount();
 
-RF24 radio(CE_PIN, CSN_PIN);
+//========================================================================= Constants definitions
+const float pi = 3.14159265;  // pi number
+int period = 10000;           // Measurement period (miliseconds)
+int delaytime = 10000;        // Time between samples (miliseconds)
+int an_radio = 90;            // Distance from center windmill to outer cup (mm)
+int jml_celah = 18;           // jumlah celah sensor
+const int btnPin = 4;         //for button start
+int button = 5;               //for button next lcd
+const byte thisSlaveAddress[5] = {'R','x','A','A','A'}; //address radio
 
-//========================================================================= define LCD
+//========================================================================= Variable definitions
+unsigned int Sample = 0;      // Sample number
+unsigned int counter = 0;     // B/W counter for sensor
+unsigned int RPM = 0;         // Revolutions per minute
+float speedwind = 0;          // Wind speed (m/s)
+float totalWindspeed = 0;     
+float avgWind = 0;
+float PembacaanTG;            //for recieved wave height
+bool newData = false;
+int dataTrigger=0; 
+String rate="";
+float output;                 //result fuzzy rule for persentace rate
+int count = 0;                //for lcd next button
+
+//========================================================================= Create 
+RF24 radio(CE_PIN, CSN_PIN);      // Create rdio
 LiquidCrystal_I2C lcd(0x27,16,2); // set address I2C dan besar karakter untuk lcd 16×2
 
 //========================================================================= define for fuzzy logic
@@ -154,11 +145,6 @@ void loop()
   // get wave height
   if(digitalRead(btnPin)==0) {
     start();
-    
-    //set kembali menjadi transmitter
-    //radio.stopListening();
-    //radio.openWritingPipe(thisSlaveAddress);
-    
   }
 }
 
@@ -169,11 +155,15 @@ void start(){
     Serial.print("Data Sent ");
     Serial.print(dataTrigger);
     if (rslt) {
+        lcd.clear();
         Serial.println("  Acknowledge received");
         setReciever();
     }
     else {
         Serial.println("  Tx failed");
+        lcd.setCursor(0,0);
+        lcd.print("Mengirim trigger");
+        start();   
     }
 }
 
@@ -184,9 +174,6 @@ void setReciever() {
     Serial.println("R");
     getData();
     showData();
-    
-    //delay(3000);
-    //radio.stopListening();
 }
 //========================================================================= get data function
 void getData() {
@@ -196,7 +183,9 @@ void getData() {
         radio.read( &PembacaanTG, sizeof(PembacaanTG) );
         newData = true;
         lcd.clear();
+        avgWind=totalWindspeed/Sample;
         xyz=1;
+        Sample=0;
     }
     else
     {
@@ -209,17 +198,8 @@ void getData() {
       RPMcalc();
       WindSpeed();
       Serial.println(speedwind);
-      //delay(100);
-
-      // Jika 120 detik sudah berlalu, sudah berlalu 20 menit
-      if (detikKe < batasDetikKe) {
-          totalWind += speedwind;
-      } else {
-          avgWind = totalWind / batasDetikKe;
-          totalWind = 0;
-          Serial.print("Rata-rata: ");
-          Serial.println(avgWind);
-      }
+      Serial.println(Sample);
+      totalWindspeed+=speedwind;
     } 
   }   
 }
@@ -227,7 +207,7 @@ void getData() {
 float fuzzycalc(){
   // fuzzy logic
   float in_wave = PembacaanTG;
-  float in_wind = speedwind; // nanti dari anemo
+  float in_wind = avgWind; // nanti dari anemo
       
   fuzzy->setInput(1, in_wave);
   fuzzy->setInput(2, in_wind);
@@ -235,8 +215,6 @@ float fuzzycalc(){
         
   float output = fuzzy->defuzzify(1);
   Serial.println(output);
-  
-  //output = opt * 100;
       
   if(output < 0.5){
     rate=" Aman ";
@@ -310,27 +288,27 @@ void showData() {
 // Measure wind speed
 void windvelocity()
 {
-speedwind = 0;
-counter = 0;
-attachInterrupt(0, addcount, CHANGE);
-unsigned long millis();
-long startTime = millis();
-while(millis() < startTime + period) {}
-
-detachInterrupt(1);
+  speedwind = 0;
+  counter = 0;
+  attachInterrupt(0, addcount, CHANGE);
+  unsigned long millis();
+  long startTime = millis();
+  while(millis() < startTime + period) {}
+  
+  detachInterrupt(1);
 }
 
 void RPMcalc()
 {
-RPM=((counter/jml_celah)*60)/(period/1000); // Calculate revolutions per minute (RPM)
+  RPM=((counter/jml_celah)*60)/(period/1000); // Calculate revolutions per minute (RPM)
 }
 
 void WindSpeed()
 {
-speedwind = ((2 * pi * an_radio * RPM)/60) / 1000; // Calculate wind speed on m/s
+  speedwind = ((2 * pi * an_radio * RPM)/60) / 1000; // Calculate wind speed on m/s
 }
 
 void addcount()
 {
-counter++;
+  counter++;
 }

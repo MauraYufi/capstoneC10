@@ -1,43 +1,51 @@
-#define BUTTON_PIN 4
+//========================================================================= define library
 #include <MPU6050_tockn.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <math.h>
-
 #include <vector>
 
+//========================================================================= Pin definitions
+#define BUTTON_PIN 4
 #define CE_PIN 26
 #define CSN_PIN 27
 
-const byte slaveAddress[5] = {'R', 'x', 'A', 'A', 'A'};
-MPU6050 mpu6050(Wire);
-long timer = 0;
-RF24 radio(CE_PIN, CSN_PIN); // Create a Radio
+//========================================================================= define function
+void getData();
+void getH();
+float getHs();
+void sends();
 
+//========================================================================= Constants definitions
+const byte slaveAddress[5] = {'R', 'x', 'A', 'A', 'A'};
+
+//========================================================================= Variable definitions
+long timer = 0;
 float PembacaanTG = 0;
 int dataTrigger = 1;
-char txNum = '0';
 float wx0; float wy0; float wz0;
 float wx1; float wy1; float wz1;
 float xn;
 float ax; float ay; float az;
 float a;
 float h;
-
-// waktu penghitungan Hs, untuk sekarang 1 menit.
 int minimalMinute = 1;
 unsigned long prevMinutes;
 unsigned long minimalSecond = minimalMinute * 60;
-
 unsigned long pointer_Hs = 0;
 std::vector<float> Hs;
-
+// waktu penghitungan Hs, untuk sekarang 1 menit.
 unsigned long currentMillis;
 unsigned long prevMillis;
 unsigned long txIntervalMillis = 1000; // send once per second
 
+//========================================================================= Create 
+MPU6050 mpu6050(Wire); //Create mpu6050
+RF24 radio(CE_PIN, CSN_PIN); // Create a Radio
+
+//========================================================================= Setup
 void setup()
 {
     Serial.begin(9600);
@@ -55,8 +63,7 @@ void setup()
     // radio.openWritingPipe(slaveAddress);
 }
 
-//====================
-
+//========================================================================= Loop
 void loop()
 {
     mpu6050.update();
@@ -96,7 +103,7 @@ void loop()
     if (pointer_Hs == minimalSecond)
     {
         // mengirim Hs
-        send();
+        sends();
         pointer_Hs = 0;
         dataTrigger = 1;
     }
@@ -105,16 +112,7 @@ void loop()
     delay(500);
 }
 
-//====================
-
-
-//================
-
-void updateMessage()
-{
-    PembacaanTG = mpu6050.getAngleX();
-}
-
+//========================================================================= getData trigger function
 void getData()
 {
     if (radio.available())
@@ -123,8 +121,7 @@ void getData()
     }
 }
 
-//================
-
+//========================================================================= get waveheight function
 void getH()
 {
     Serial.println("wX0\twY0\twZ0");
@@ -166,39 +163,7 @@ void getH()
     Hs.push_back(h);
 }
 
-void send()
-{
-    bool rslt;
-    radio.stopListening();
-    radio.openWritingPipe(slaveAddress);
-    PembacaanTG = getHs();
-
-    rslt = radio.write(&PembacaanTG, sizeof(PembacaanTG));
-    // Always use sizeof() as it gives the size as the number of bytes.
-    // For example if dataToSend was an int sizeof() would correctly return 2
-
-    Serial.println("Data Sent");
-    Serial.print("Tinggi Hs\t: ");
-    Serial.println(PembacaanTG);
-    Serial.print("a\t: ");
-    Serial.println(a);
-    Serial.print("xn\t: ");
-    Serial.println(xn);
-    // Serial.println(h);
-    if (rslt)
-    {
-        Serial.println(" Acknowledge received");
-        radio.openReadingPipe(1, slaveAddress);
-        radio.startListening();
-        Serial.println("R");
-    }
-    else
-    {
-        Serial.println(" Tx failed");
-    }
-}
-
-
+//========================================================================= get significant wave height function
 float getHs()
 {
     // urutkan hs untuk mendapat nilai terbesar
@@ -215,4 +180,34 @@ float getHs()
     Hs_akhir /= totalH;
 
     return Hs_akhir;
+}
+
+//========================================================================= send significant wave height function
+void sends()
+{
+    bool rslt;
+    radio.stopListening();
+    radio.openWritingPipe(slaveAddress);
+    PembacaanTG = getHs();
+
+    rslt = radio.write(&PembacaanTG, sizeof(PembacaanTG));
+    // Always use sizeof() as it gives the size as the number of bytes.
+    // For example if dataToSend was an int sizeof() would correctly return 2
+
+    Serial.println("Data Sent");
+    Serial.print("Tinggi Hs\t: ");
+    Serial.println(PembacaanTG);
+    
+    if (rslt)
+    {
+        Serial.println(" Acknowledge received");
+        radio.openReadingPipe(1, slaveAddress);
+        radio.startListening();
+        Serial.println("R");
+    }
+    else
+    {
+      Serial.println(" Tx failed");
+      sends();
+    }
 }
