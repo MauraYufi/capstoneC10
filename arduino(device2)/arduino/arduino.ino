@@ -31,6 +31,9 @@ int jml_celah = 18;           // jumlah celah sensor
 const int btnPin = 4;         //for button start
 int button = 5;               //for button next lcd
 const byte thisSlaveAddress[5] = {'R','x','A','A','A'}; //address radio
+unsigned long triggerDuration = 10000;
+unsigned long getDataMinute = 2;
+unsigned long getDataDuration = getDataMinute * 60000 + 20000;
 
 //========================================================================= Variable definitions
 unsigned int Sample = 0;      // Sample number
@@ -38,13 +41,15 @@ unsigned int counter = 0;     // B/W counter for sensor
 unsigned int RPM = 0;         // Revolutions per minute
 float speedwind = 0;          // Wind speed (m/s)
 float totalWindspeed = 0;     
-float avgWind = 0;
+volatile float avgWind = 0;
 float PembacaanTG;            //for recieved wave height
 bool newData = false;
 int dataTrigger=0; 
 String rate="";
 float output;                 //result fuzzy rule for persentace rate
 int count = 0;                //for lcd next button
+unsigned long triggerStartedMillis = 0;
+unsigned long getDataStartMillis = 0;
 
 //========================================================================= Create 
 RF24 radio(CE_PIN, CSN_PIN);      // Create rdio
@@ -86,6 +91,11 @@ void setup() {
     
     // pin next lcd
     lcd.init(); // inisiasi LCD
+    lcd.clear();
+    lcd.setCursor(5,0);
+    lcd.print("Tekan");
+    lcd.setCursor(5,1);
+    lcd.print("Tombol");
     pinMode(button,INPUT_PULLUP);
     lcd.backlight();
 
@@ -146,6 +156,8 @@ void loop()
 {
   // get wave height
   if(digitalRead(btnPin)==0) {
+    lcd.clear();
+    triggerStartedMillis = millis();
     start();
   }
 }
@@ -162,10 +174,24 @@ void start(){
         setReciever();
     }
     else {
-        Serial.println("  Tx failed");
-        lcd.setCursor(0,0);
-        lcd.print("Mengirim trigger");
-        start();   
+        unsigned long currTriggerMillis = millis();
+
+        if(currTriggerMillis - triggerStartedMillis < triggerDuration){
+          Serial.println("  Tx failed");
+          lcd.setCursor(0,0);
+          lcd.print("Mengirim trigger");
+          start(); 
+        }
+        else {
+          lcd.clear();
+          lcd.setCursor(4,0);
+          lcd.print("Time Out");
+          lcd.setCursor(4,1);
+          lcd.print("Cek Alat");
+          delay(2000);
+          setup();
+          
+        }
     }
 }
 
@@ -174,6 +200,7 @@ void setReciever() {
     radio.openReadingPipe(1, thisSlaveAddress);
     radio.startListening();
     Serial.println("R");
+    getDataStartMillis = millis();
     getData();
     showData();
 }
@@ -195,19 +222,29 @@ void getData() {
       lcd.print("Mohon Tunggu");
       
       lcd.setCursor(4,1);
-      char progressBar[Sample%6];
-      for (int i=0; i<; i++) {
-        progressBar[i] = "."
+      lcd.print("Tunggu");
+      unsigned long currGetDataMillis = millis();
+
+      if(currGetDataMillis - getDataStartMillis < getDataDuration){
+          Sample++;
+          windvelocity();
+          RPMcalc();
+          WindSpeed();
+          Serial.println(speedwind);
+          Serial.println(Sample);
+          totalWindspeed+=speedwind;
       }
-      lcd.print(char);
-      
-      Sample++;
-      windvelocity();
-      RPMcalc();
-      WindSpeed();
-      Serial.println(speedwind);
-      Serial.println(Sample);
-      totalWindspeed+=speedwind;
+      else {
+          lcd.clear();
+          lcd.setCursor(4,0);
+          lcd.print("Time Out");
+          lcd.setCursor(4,1);
+          lcd.print("Cek Alat");
+          delay(2000);
+          xyz=1;
+          setup();
+          //return;
+      }
     } 
   }   
 }
