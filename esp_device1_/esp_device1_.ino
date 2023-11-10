@@ -11,6 +11,7 @@
 #define BUTTON_PIN 4
 #define CE_PIN 26
 #define CSN_PIN 27
+#define LED_BUILTIN 2
 
 //========================================================================= define function
 void getData();
@@ -20,6 +21,8 @@ void sends();
 
 //========================================================================= Constants definitions
 const byte slaveAddress[5] = {'R', 'x', 'A', 'A', 'A'};
+unsigned long sendDuration = 20000;
+
 
 //========================================================================= Variable definitions
 long timer = 0;
@@ -40,6 +43,7 @@ std::vector<float> Hs;
 unsigned long currentMillis;
 unsigned long prevMillis;
 unsigned long txIntervalMillis = 1000; // send once per second
+unsigned long sendStartMillis = 0;
 
 //========================================================================= Create 
 MPU6050 mpu6050(Wire); //Create mpu6050
@@ -49,10 +53,12 @@ RF24 radio(CE_PIN, CSN_PIN); // Create a Radio
 void setup()
 {
     Serial.begin(9600);
+    Serial.println("SimpleTx Starting");
     Wire.begin();
     mpu6050.begin();
     mpu6050.calcGyroOffsets(true);
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(LED_BUILTIN, OUTPUT);
     // Serial.println("SimpleTx Starting");
 
     radio.begin();
@@ -61,6 +67,7 @@ void setup()
     radio.openReadingPipe(1, slaveAddress);
     radio.startListening();
     // radio.openWritingPipe(slaveAddress);
+    Serial.println(dataTrigger);
 }
 
 //========================================================================= Loop
@@ -72,7 +79,6 @@ void loop()
     if (currentMillis - prevMillis >= txIntervalMillis && dataTrigger == 0)
     { /// ketika ada dapat nilai 0 dari user, maka device laut jadi transmitter
         radio.stopListening();
-        Serial.println("SimpleTx Starting");
         radio.setRetries(3, 5); // delay, count
         radio.openWritingPipe(slaveAddress);
         // Untuk menghitung tinggi gelombang saat ini
@@ -103,6 +109,7 @@ void loop()
     if (pointer_Hs == minimalSecond)
     {
         // mengirim Hs
+        sendStartMillis = millis();
         sends();
         pointer_Hs = 0;
         dataTrigger = 1;
@@ -193,6 +200,10 @@ void sends()
     rslt = radio.write(&PembacaanTG, sizeof(PembacaanTG));
     // Always use sizeof() as it gives the size as the number of bytes.
     // For example if dataToSend was an int sizeof() would correctly return 2
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(100);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(100);
 
     Serial.println("Data Sent");
     Serial.print("Tinggi Hs\t: ");
@@ -207,7 +218,16 @@ void sends()
     }
     else
     {
-      Serial.println(" Tx failed");
-      sends();
+        unsigned long currSendMillis = millis();
+
+        if(currSendMillis - sendStartMillis < sendDuration){
+          Serial.println(" Tx failed");
+          sends();
+        }
+        else {
+          radio.openReadingPipe(1, slaveAddress);
+          radio.startListening();
+        }
+      
     }
 }
