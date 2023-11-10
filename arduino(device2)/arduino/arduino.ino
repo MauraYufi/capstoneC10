@@ -181,7 +181,7 @@ void start(){
           lcd.setCursor(0,0);
           lcd.print("Mengirim trigger");
 
-          int millProgress = ((currTriggerMillis - triggerStartedMillis) / 1000) % 15;
+          int millProgress = ((currTriggerMillis - triggerStartedMillis) / 1000) % 10;
           char progressBar[millProgress];
           for (int i=1; i<=millProgress; i++) {
             progressBar[i] = "."
@@ -234,7 +234,7 @@ void getData() {
       
       unsigned long currGetDataMillis = millis();
 
-      int millProgress = ((currGetDataMillis - getDataStartMillis) / 1000) % 15;
+      int millProgress = ((currGetDataMillis - getDataStartMillis) / 1000) % 10;
       char progressBar[millProgress];
       for (int i=1; i<=millProgress; i++) {
         progressBar[i] = "."
