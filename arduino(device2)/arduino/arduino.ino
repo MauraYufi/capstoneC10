@@ -180,6 +180,17 @@ void start(){
           Serial.println("  Tx failed");
           lcd.setCursor(0,0);
           lcd.print("Mengirim trigger");
+
+          int millProgress = ((currTriggerMillis - triggerStartedMillis) / 1000) % 15;
+          char progressBar[millProgress];
+          for (int i=1; i<=millProgress; i++) {
+            progressBar[i] = "."
+          }
+    
+          lcd.setCursor(1,1);
+          lcd.print(progressBar);
+
+          lcd.print("Mengirim trigger");
           start(); 
         }
         else {
