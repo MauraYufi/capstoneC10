@@ -221,9 +221,16 @@ void getData() {
       lcd.setCursor(5,0);
       lcd.print("Mohon Tunggu");
       
-      lcd.setCursor(4,1);
-      lcd.print("Tunggu");
       unsigned long currGetDataMillis = millis();
+
+      int millProgress = ((currGetDataMillis - getDataStartMillis) / 1000) % 15;
+      char progressBar[millProgress];
+      for (int i=1; i<=millProgress; i++) {
+        progressBar[i] = "."
+      }
+
+      lcd.setCursor(4,1);
+      lcd.print(progressBar);
 
       if(currGetDataMillis - getDataStartMillis < getDataDuration){
           Sample++;
