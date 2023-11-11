@@ -5,6 +5,8 @@
 #include <Wire.h> //library I2C
 #include <LiquidCrystal_I2C.h>    //library LCD
 #include <Fuzzy.h>
+//========================================================================= Progress Bar
+#include <LcdProgressBar.h>
 
 //========================================================================= Pin definitions
 #define windPin 2 // Receive the data from sensor
@@ -56,6 +58,7 @@ RF24 radio(CE_PIN, CSN_PIN);      // Create rdio
 LiquidCrystal_I2C lcd(0x27,16,2); // set address I2C dan besar karakter untuk lcd 16×2
 
 //========================================================================= Progress Bar
+LcdProgressBar lpg(&lcd, 1, 16);
 
 //========================================================================= define for fuzzy logic
 Fuzzy *fuzzy = new Fuzzy();
@@ -180,17 +183,6 @@ void start(){
           Serial.println("  Tx failed");
           lcd.setCursor(0,0);
           lcd.print("Mengirim trigger");
-
-          int millProgress = ((currTriggerMillis - triggerStartedMillis) / 1000) % 10;
-          char progressBar[millProgress];
-          for (int i=1; i<=millProgress; i++) {
-            progressBar[i] = "."
-          }
-    
-          lcd.setCursor(1,1);
-          lcd.print(progressBar);
-
-          lcd.print("Mengirim trigger");
           start(); 
         }
         else {
@@ -212,6 +204,11 @@ void setReciever() {
     radio.startListening();
     Serial.println("R");
     getDataStartMillis = millis();
+  
+    //-- Set min and max values 
+  	lpg.setMinValue(getDataStartMillis); 
+  	lpg.setMaxValue(getDataStartMillis + getDataDuration); 
+  
     getData();
     showData();
 }
@@ -234,14 +231,8 @@ void getData() {
       
       unsigned long currGetDataMillis = millis();
 
-      int millProgress = ((currGetDataMillis - getDataStartMillis) / 1000) % 10;
-      char progressBar[millProgress];
-      for (int i=1; i<=millProgress; i++) {
-        progressBar[i] = "."
-      }
-
       lcd.setCursor(4,1);
-      lcd.print(progressBar);
+      lpg.draw(currGetDataMillis); 
 
       if(currGetDataMillis - getDataStartMillis < getDataDuration){
           Sample++;
