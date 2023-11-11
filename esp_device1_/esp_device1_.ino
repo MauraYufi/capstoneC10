@@ -186,6 +186,8 @@ float getHs()
 
     Hs_akhir /= totalH;
 
+    Hs.clear();
+
     return Hs_akhir;
 }
 
