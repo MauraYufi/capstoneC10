@@ -5,17 +5,37 @@
 #include <Wire.h> //library I2C
 #include <LiquidCrystal_I2C.h>    //library LCD
 #include <Fuzzy.h>
-//========================================================================= Progress Bar
-#include <LcdProgressBar.h>
 
-//========================================================================= Pin definitions
+//========================================================================= Pin and length definition
 #define windPin 2 // Receive the data from sensor
 #define CE_PIN    7
 #define CSN_PIN   8
 #define lenght 16.0
-double percent=100.0;
-unsigned char b;
-unsigned int peace;
+
+//========================================================================= define function
+void start();
+void setReciever();
+void getData();
+float fuzzycalc();
+void showData();
+void windvelocity();
+void RPMcalc();
+void WindSpeed();
+void addcount();
+void updateProgressBar(unsigned long count, unsigned long totalCount, int lineToPrintOn);
+
+//========================================================================= Constants definitions
+const float pi = 3.14159265;  // pi number
+int period = 10000;           // Measurement period (miliseconds)
+int delaytime = 10000;        // Time between samples (miliseconds)
+int an_radio = 90;            // Distance from center windmill to outer cup (mm)
+int jml_celah = 18;           // jumlah celah sensor
+const int btnPin = 4;         //for button start
+int button = 5;               //for button next lcd
+const byte thisSlaveAddress[5] = {'R','x','A','A','A'}; //address radio
+unsigned long triggerDuration = 10000;
+unsigned long getDataMinute = 2;
+float getDataDuration = getDataMinute * 60000 + 20000;
 byte p1[8] = {
   0x10,
   0x10,
@@ -66,31 +86,6 @@ byte p5[8] = {
   0x1F,
   0x1F};
 
-//========================================================================= define function
-void start();
-void setReciever();
-void getData();
-float fuzzycalc();
-void showData();
-void windvelocity();
-void RPMcalc();
-void WindSpeed();
-void addcount();
-void updateProgressBar(unsigned long count, unsigned long totalCount, int lineToPrintOn);
-
-//========================================================================= Constants definitions
-const float pi = 3.14159265;  // pi number
-int period = 10000;           // Measurement period (miliseconds)
-int delaytime = 10000;        // Time between samples (miliseconds)
-int an_radio = 90;            // Distance from center windmill to outer cup (mm)
-int jml_celah = 18;           // jumlah celah sensor
-const int btnPin = 4;         //for button start
-int button = 5;               //for button next lcd
-const byte thisSlaveAddress[5] = {'R','x','A','A','A'}; //address radio
-unsigned long triggerDuration = 10000;
-unsigned long getDataMinute = 2;
-float getDataDuration = getDataMinute * 60000 + 20000;
-
 //========================================================================= Variable definitions
 unsigned int Sample = 0;      // Sample number
 unsigned int counter = 0;     // B/W counter for sensor
@@ -106,13 +101,13 @@ float output;                 //result fuzzy rule for persentace rate
 int count = 0;                //for lcd next button
 unsigned long triggerStartedMillis = 0;
 float getDataStartMillis = 0;
+double percent=100.0;
+unsigned char b;
+unsigned int peace;
 
 //========================================================================= Create 
 RF24 radio(CE_PIN, CSN_PIN);      // Create rdio
 LiquidCrystal_I2C lcd(0x27,16,2); // set address I2C dan besar karakter untuk lcd 16×2
-
-//========================================================================= Progress Bar
-LcdProgressBar lpg(&lcd, 1, 16);
 
 //========================================================================= define for fuzzy logic
 Fuzzy *fuzzy = new Fuzzy();
@@ -315,6 +310,7 @@ void getData() {
   }   
 }
 
+//========================================================================= calculate fuzzy function
 float fuzzycalc(){
   // fuzzy logic
   float in_wave = PembacaanTG;
@@ -396,7 +392,7 @@ void showData() {
   Serial.println("T");
 }
 
-// Measure wind speed
+//=========================================================================  easure wind speed function
 void windvelocity()
 {
   speedwind = 0;
@@ -406,6 +402,8 @@ void windvelocity()
   long startTime = millis();
   while(millis() < startTime + period) {}
   percent = (millis() - getDataStartMillis)/(getDataDuration-20000)*100.0;
+  
+  //progressbar
   lcd.setCursor(0,1);
   double a=lenght/100*percent;
   if (a>=1) 
@@ -418,8 +416,8 @@ void windvelocity()
   }
 
   peace=a*5;
-
-// drawing charater's colums
+  
+  // drawing charater's colums
   switch (peace) 
   {
     case 0:
@@ -437,8 +435,8 @@ void windvelocity()
       lcd.write(byte(3));
       break;
   }
-
-//clearing line
+  
+  //clearing line
   for (int i =0;i<(lenght-b);i++) 
   {
     lcd.print(" ");
@@ -447,16 +445,19 @@ void windvelocity()
   detachInterrupt(1);
 }
 
+//========================================================================= calculate RPM function
 void RPMcalc()
 {
   RPM=((counter/jml_celah)*60)/(period/1000); // Calculate revolutions per minute (RPM)
 }
 
+//========================================================================= calculate speedwind function
 void WindSpeed()
 {
   speedwind = ((2 * pi * an_radio * RPM)/60) / 1000; // Calculate wind speed on m/s
 }
 
+//========================================================================= addcount function
 void addcount()
 {
   counter++;
