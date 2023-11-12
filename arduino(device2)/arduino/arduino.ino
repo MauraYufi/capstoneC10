@@ -5,6 +5,8 @@
 #include <Wire.h> //library I2C
 #include <LiquidCrystal_I2C.h>    //library LCD
 #include <Fuzzy.h>
+//========================================================================= Progress Bar
+#include <LcdProgressBar.h>
 
 //========================================================================= Pin definitions
 #define windPin 2 // Receive the data from sensor
@@ -110,6 +112,7 @@ RF24 radio(CE_PIN, CSN_PIN);      // Create rdio
 LiquidCrystal_I2C lcd(0x27,16,2); // set address I2C dan besar karakter untuk lcd 16×2
 
 //========================================================================= Progress Bar
+LcdProgressBar lpg(&lcd, 1, 16);
 
 //========================================================================= define for fuzzy logic
 Fuzzy *fuzzy = new Fuzzy();
@@ -260,10 +263,6 @@ void setReciever() {
     radio.startListening();
     Serial.println("R");
     getDataStartMillis = millis();
-<<<<<<< Updated upstream
-=======
-  
->>>>>>> Stashed changes
     getData();
     showData();
 }
@@ -284,17 +283,9 @@ void getData() {
       lcd.setCursor(2,0);
       lcd.print("Mohon Tunggu");
       
-<<<<<<< Updated upstream
-      lcd.setCursor(4,1);
-      lcd.print("Tunggu");
-      unsigned long currGetDataMillis = millis();
-
-      if(currGetDataMillis - getDataStartMillis < getDataDuration){
-=======
       unsigned long int currGetDataMillis = millis();
 
       if(currGetDataMillis - getDataStartMillis < getDataDuration - 20000){
->>>>>>> Stashed changes
           Sample++;
           windvelocity();
           RPMcalc();

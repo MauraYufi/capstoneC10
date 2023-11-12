@@ -196,6 +196,8 @@ void sends()
     radio.stopListening();
     radio.openWritingPipe(slaveAddress);
     PembacaanTG = getHs();
+    
+    Hs.clear();
 
     rslt = radio.write(&PembacaanTG, sizeof(PembacaanTG));
     // Always use sizeof() as it gives the size as the number of bytes.
