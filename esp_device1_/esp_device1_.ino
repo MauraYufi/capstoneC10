@@ -163,7 +163,7 @@ void getH()
     xn = sqrt((pow((wx1 - wx0) * 0.0175, 2) + pow((wy1 - wy0) * 0.0175, 2) + pow((wz1 - wz0) * 0.0175, 2)));
     h = a / pow(xn, 2);
 
-    if (h>100){
+    if (h>10){
       h = 0;
     }
 
@@ -186,9 +186,7 @@ float getHs()
 
     Hs_akhir /= totalH;
 
-    Hs.clear();
-
-    return Hs_akhir;
+    return Hs_akhir/10.0;
 }
 
 //========================================================================= send significant wave height function
@@ -218,6 +216,7 @@ void sends()
         Serial.println(" Acknowledge received");
         radio.openReadingPipe(1, slaveAddress);
         radio.startListening();
+        std::fill(Hs.begin(), Hs.end(), 0.0);
         Serial.println("R");
     }
     else

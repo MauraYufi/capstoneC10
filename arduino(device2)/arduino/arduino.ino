@@ -12,6 +12,59 @@
 #define windPin 2 // Receive the data from sensor
 #define CE_PIN    7
 #define CSN_PIN   8
+#define lenght 16.0
+double percent=100.0;
+unsigned char b;
+unsigned int peace;
+byte p1[8] = {
+  0x10,
+  0x10,
+  0x10,
+  0x10,
+  0x10,
+  0x10,
+  0x10,
+  0x10};
+
+byte p2[8] = {
+  0x18,
+  0x18,
+  0x18,
+  0x18,
+  0x18,
+  0x18,
+  0x18,
+  0x18};
+
+byte p3[8] = {
+  0x1C,
+  0x1C,
+  0x1C,
+  0x1C,
+  0x1C,
+  0x1C,
+  0x1C,
+  0x1C};
+
+byte p4[8] = {
+  0x1E,
+  0x1E,
+  0x1E,
+  0x1E,
+  0x1E,
+  0x1E,
+  0x1E,
+  0x1E};
+
+byte p5[8] = {
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F};
 
 //========================================================================= define function
 void start();
@@ -23,6 +76,7 @@ void windvelocity();
 void RPMcalc();
 void WindSpeed();
 void addcount();
+void updateProgressBar(unsigned long count, unsigned long totalCount, int lineToPrintOn);
 
 //========================================================================= Constants definitions
 const float pi = 3.14159265;  // pi number
@@ -35,7 +89,7 @@ int button = 5;               //for button next lcd
 const byte thisSlaveAddress[5] = {'R','x','A','A','A'}; //address radio
 unsigned long triggerDuration = 10000;
 unsigned long getDataMinute = 2;
-unsigned long getDataDuration = getDataMinute * 60000 + 20000;
+float getDataDuration = getDataMinute * 60000 + 20000;
 
 //========================================================================= Variable definitions
 unsigned int Sample = 0;      // Sample number
@@ -51,7 +105,7 @@ String rate="";
 float output;                 //result fuzzy rule for persentace rate
 int count = 0;                //for lcd next button
 unsigned long triggerStartedMillis = 0;
-unsigned long getDataStartMillis = 0;
+float getDataStartMillis = 0;
 
 //========================================================================= Create 
 RF24 radio(CE_PIN, CSN_PIN);      // Create rdio
@@ -94,6 +148,11 @@ void setup() {
     
     // pin next lcd
     lcd.init(); // inisiasi LCD
+    lcd.createChar(0, p1);
+    lcd.createChar(1, p2);
+    lcd.createChar(2, p3);
+    lcd.createChar(3, p4);
+    lcd.createChar(4, p5);
     lcd.clear();
     lcd.setCursor(5,0);
     lcd.print("Tekan");
@@ -204,11 +263,6 @@ void setReciever() {
     radio.startListening();
     Serial.println("R");
     getDataStartMillis = millis();
-  
-    //-- Set min and max values 
-  	lpg.setMinValue(getDataStartMillis); 
-  	lpg.setMaxValue(getDataStartMillis + getDataDuration); 
-  
     getData();
     showData();
 }
@@ -226,15 +280,12 @@ void getData() {
     }
     else
     {
-      lcd.setCursor(5,0);
+      lcd.setCursor(2,0);
       lcd.print("Mohon Tunggu");
       
-      unsigned long currGetDataMillis = millis();
+      unsigned long int currGetDataMillis = millis();
 
-      lcd.setCursor(4,1);
-      lpg.draw(currGetDataMillis); 
-
-      if(currGetDataMillis - getDataStartMillis < getDataDuration){
+      if(currGetDataMillis - getDataStartMillis < getDataDuration - 20000){
           Sample++;
           windvelocity();
           RPMcalc();
@@ -242,17 +293,23 @@ void getData() {
           Serial.println(speedwind);
           Serial.println(Sample);
           totalWindspeed+=speedwind;
+          
       }
-      else {
+      else if (currGetDataMillis - getDataStartMillis > getDataDuration-20000 && (currGetDataMillis - getDataStartMillis < getDataDuration)){
+          lcd.clear();
+          lcd.setCursor(0,0);
+          lcd.print("Menunggu Data");
+      }
+      else
+      {
+          xyz=1;
           lcd.clear();
           lcd.setCursor(4,0);
           lcd.print("Time Out");
           lcd.setCursor(4,1);
           lcd.print("Cek Alat");
           delay(2000);
-          xyz=1;
           setup();
-          //return;
       }
     } 
   }   
@@ -348,6 +405,44 @@ void windvelocity()
   unsigned long millis();
   long startTime = millis();
   while(millis() < startTime + period) {}
+  percent = (millis() - getDataStartMillis)/(getDataDuration-20000)*100.0;
+  lcd.setCursor(0,1);
+  double a=lenght/100*percent;
+  if (a>=1) 
+  {
+    for (int i=1;i<a;i++) {
+      lcd.write(byte(4));
+      b=i;
+    }
+    a=a-b;
+  }
+
+  peace=a*5;
+
+// drawing charater's colums
+  switch (peace) 
+  {
+    case 0:
+      break;
+    case 1:
+      lcd.write(byte(0));
+      break;
+    case 2:
+      lcd.write(byte(1));
+      break;
+    case 3:
+      lcd.write(byte(2));
+      break;
+    case 4:
+      lcd.write(byte(3));
+      break;
+  }
+
+//clearing line
+  for (int i =0;i<(lenght-b);i++) 
+  {
+    lcd.print(" ");
+  };
   
   detachInterrupt(1);
 }
